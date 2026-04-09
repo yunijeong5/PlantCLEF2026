@@ -1,2 +1,2 @@
 # PlantCLEF2026
-PlantCLEF2026 @ LifeCLEF &amp; &amp; CVPR-FGVC Challenge for CS682
+PlantCLEF2026 @ LifeCLEF: CVPR-FGVC Challenge for CS682

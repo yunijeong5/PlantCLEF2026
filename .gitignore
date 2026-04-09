@@ -1,3 +1,13 @@
+
+# Large data
+data_raw*/
+data/
+pretrained_models*/
+
+jobs/
+outputs_slurm/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
