@@ -1,0 +1,33 @@
+numpy < 2
+pandas
+matplotlib
+scikit-learn
+tqdm
+pyspark >= 3.4.0
+pyarrow
+luigi
+aria2
+torch
+timm
+transformers
+typer
+opencv-python
+scikit-image
+faiss-gpu
+plottable
+huggingface_hub
+geopy
+folium
+shapely
+geopandas
+pacmap
+umap-learn
+
+# developer tools
+jupyterlab
+ruff
+pre-commit
+pytest
+xmltodict
+ipywidgets
+python-dotenv

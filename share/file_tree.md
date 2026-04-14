@@ -1,7 +1,7 @@
 # File tree from project root
 
 ```
-.
+PlantCLEF2026
 ├── README.md
 ├── data (gitignored)
 │   ├── test
@@ -19,6 +19,7 @@
 ```
 
 # File tree from data
+
 ```
 data
 ├── test
