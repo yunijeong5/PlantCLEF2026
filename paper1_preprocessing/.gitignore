@@ -1,0 +1,3 @@
+/target
+/lib-cuda-rs/cuda_build_dir
+.vscode

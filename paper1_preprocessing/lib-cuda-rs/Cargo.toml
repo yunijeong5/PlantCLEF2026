@@ -1,0 +1,15 @@
+[package]
+name = "lib-cuda-rs"
+version = "0.8.4"
+
+[dependencies]
+anyhow = "1"
+candle = { version = "0.9.1", features = ["cudnn"], package = "candle-core" }
+half = { version = "2.3.1", features = ["num-traits"] }
+
+[build-dependencies]
+bindgen_cuda = "0.1.1"
+anyhow = { version = "1", features = ["backtrace"] }
+
+[dev-dependencies]
+anyhow = { version = "1", features = ["backtrace"] }
