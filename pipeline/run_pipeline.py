@@ -249,10 +249,16 @@ def _parse_args() -> PipelineConfig:
     p.add_argument("--training-metadata-csv", default=defaults.training_metadata_csv)
 
     # Submission
-    p.add_argument("--top-k",     type=int,   default=defaults.top_k)
+    p.add_argument(
+        "--top-k", type=int, nargs="+", default=[defaults.top_k],
+        help="One or more K values. When multiple are given, writes one CSV per K "
+             "(use {k} in --output as a template, e.g. output/sub_{k}.csv, or names "
+             "are auto-generated as <stem>_topk<K>.csv). The pipeline runs once.",
+    )
     p.add_argument("--min-score", type=float, default=defaults.min_score)
 
     a = p.parse_args()
+    top_k_list = sorted(set(a.top_k))  # deduplicate, ascending
 
     cfg = PipelineConfig(
         images_dir              = a.images_dir,
@@ -272,18 +278,42 @@ def _parse_args() -> PipelineConfig:
         prior_data_path         = a.prior_data_path,
         use_geo_filter          = a.use_geo_filter,
         training_metadata_csv   = a.training_metadata_csv,
-        top_k                   = a.top_k,
+        top_k                   = max(top_k_list),  # run with largest K; main() slices
         min_score               = a.min_score,
     )
-    # Store output path for use after run()
+    # Stored for main() — not part of PipelineConfig dataclass
     cfg._output_csv = a.output
+    cfg._top_k_list = top_k_list
     return cfg
+
+
+def _format_output_path(template: str, k: int, multi: bool) -> str:
+    """Return output path for a given K value.
+
+    - If template contains '{k}', substitute it.
+    - If multi=True and no '{k}', insert '_topk{k}' before the extension.
+    - Otherwise return template unchanged (single-K, backward-compatible).
+    """
+    if "{k}" in template:
+        return template.format(k=k)
+    if multi:
+        p = Path(template)
+        return str(p.parent / f"{p.stem}_topk{k}{p.suffix}")
+    return template
 
 
 def main() -> None:
     cfg = _parse_args()
-    results = run(cfg)
-    write_submission(results, cfg._output_csv)
+    top_k_list: List[int] = cfg._top_k_list  # set by _parse_args
+    results = run(cfg)  # runs with max(top_k_list); results already sliced to that max
+
+    multi = len(top_k_list) > 1
+    for k in top_k_list:
+        sliced = {stem: species[:k] for stem, species in results.items()}
+        out_path = _format_output_path(cfg._output_csv, k, multi)
+        write_submission(sliced, out_path)
+        if multi:
+            print(f"Written top-{k}: {out_path}")
 
 
 if __name__ == "__main__":
