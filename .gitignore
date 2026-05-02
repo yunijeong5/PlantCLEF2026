@@ -7,6 +7,8 @@ pretrained_models*/
 jobs/
 outputs_slurm/
 
+# Paper 1
+paper1_preprocessing/
 
 # Paper 2
 paper2_postprocessing/genai/
@@ -15,6 +17,9 @@ paper2_postprocessing/user/
 paper2_postprocessing/tests/
 paper2_postprocessing/docs/
 paper2_postprocessing/figures
+
+# dev
+.claude/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
