@@ -45,7 +45,7 @@ from PIL import Image
 
 from .aggregation import aggregate
 from .config import PipelineConfig
-from .features import get_all_logits, load_cached_logits_scale1
+from .features import _logit_path, get_all_logits, load_cached_logits_scale1
 from .geo_filter import apply_geo_filter, load_or_build_geo_mask
 from .model import load_model
 from .prior import (
@@ -74,6 +74,15 @@ def _ensure_scale1_in_scales(scales: List[int]) -> List[int]:
     return scales
 
 
+def _all_logits_cached(stems: List[str], scales: List[int], cache_dir: str) -> bool:
+    """Return True when every requested image/scale logit file exists."""
+    return all(
+        _logit_path(cache_dir, stem, scale).exists()
+        for stem in stems
+        for scale in scales
+    )
+
+
 # ── pipeline ──────────────────────────────────────────────────────────────────
 
 
@@ -83,11 +92,6 @@ def run(cfg: PipelineConfig) -> Dict[str, List[int]]:
     stems = [p.stem for p in img_paths]
     print(f"Found {len(img_paths)} test images.")
 
-    # ── Model ─────────────────────────────────────────────────────────────────
-    print("Loading model...")
-    model = load_model(cfg.model_name, cfg.num_classes, cfg.model_path)
-    class_ids = load_class_names(cfg.class_mapping_file)  # index → species_id
-
     # ── Decide which scales to run ────────────────────────────────────────────
     # If Bayesian prior is requested and no pre-computed file is given, we need
     # scale-1 logits to compute the prior.  Add scale=1 if absent.
@@ -96,6 +100,17 @@ def run(cfg: PipelineConfig) -> Dict[str, List[int]]:
     if cfg.use_bayesian_prior and cfg.prior_data_path is None and 1 not in run_scales:
         run_scales = _ensure_scale1_in_scales(run_scales)
         extra_scale1 = True  # we added it only for prior computation
+
+    # ── Model ─────────────────────────────────────────────────────────────────
+    # Cached logits are enough for aggregation/post-processing, so do not require
+    # the pretrained checkpoint for cache-only runs.
+    model = None
+    if _all_logits_cached(stems, run_scales, cfg.cache_dir):
+        print("All requested logits found in cache; skipping model load.")
+    else:
+        print("Loading model...")
+        model = load_model(cfg.model_name, cfg.num_classes, cfg.model_path)
+    class_ids = load_class_names(cfg.class_mapping_file)  # index → species_id
 
     # ── Geo mask ──────────────────────────────────────────────────────────────
     geo_mask: Optional[np.ndarray] = None
@@ -178,7 +193,7 @@ def run(cfg: PipelineConfig) -> Dict[str, List[int]]:
 
         # Apply Bayesian prior (after aggregation — equivalent to before, more efficient)
         if priors is not None:
-            image_probs = apply_prior(image_probs, stem, priors)
+            image_probs = apply_prior(image_probs, stem, priors, cfg.prior_strength)
 
         # Geographical filter
         if geo_mask is not None:
@@ -285,6 +300,12 @@ def _parse_args() -> PipelineConfig:
         help="Pre-computed cluster priors .npy file, shape [NUM_CLUSTERS, num_classes]. "
         "If omitted, priors are computed from scale-1 predictions.",
     )
+    p.add_argument(
+        "--prior-strength",
+        type=float,
+        default=defaults.prior_strength,
+        help="Exponent applied to the Bayesian prior. 1.0 keeps the original prior; 0.0 disables its effect.",
+    )
 
     p.add_argument(
         "--geo-filter", dest="use_geo_filter", action="store_true", default=True
@@ -322,6 +343,7 @@ def _parse_args() -> PipelineConfig:
         topk_mean_k=a.topk_mean_k,
         vote_k=a.vote_k,
         use_bayesian_prior=a.use_bayesian_prior,
+        prior_strength=a.prior_strength,
         prior_data_path=a.prior_data_path,
         use_geo_filter=a.use_geo_filter,
         training_metadata_csv=a.training_metadata_csv,
