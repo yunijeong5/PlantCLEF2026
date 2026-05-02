@@ -199,6 +199,10 @@ def main():
     p.add_argument("--cache-dir",            default=defaults.cache_dir)
     p.add_argument("--training-metadata-csv", default=defaults.training_metadata_csv)
     p.add_argument("--batch-size",  type=int, default=defaults.batch_size)
+    p.add_argument("--jpeg",    dest="use_jpeg_compression", action="store_true",  default=True,
+                   help="Apply JPEG 4:2:2 q85 round-trip per tile (default).")
+    p.add_argument("--no-jpeg", dest="use_jpeg_compression", action="store_false",
+                   help="Skip JPEG round-trip — raw tiles. Use a separate --cache-dir.")
     p.add_argument("--skip-geo",    action="store_true",
                    help="Skip geo mask build (if metadata CSV is unavailable).")
     p.add_argument("--dry-run",     action="store_true",
@@ -212,9 +216,8 @@ def main():
         cache_dir             = a.cache_dir,
         training_metadata_csv = a.training_metadata_csv,
         batch_size            = a.batch_size,
-        # Fixed for this run — Paper 1 best config:
         scales                = [6, 5, 4, 3, 2, 1],
-        use_jpeg_compression  = True,
+        use_jpeg_compression  = a.use_jpeg_compression,
         jpeg_quality          = 85,
         jpeg_subsampling      = "4:2:2",
     )
