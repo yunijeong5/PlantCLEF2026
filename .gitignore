@@ -4,6 +4,7 @@ data_raw*/
 data/
 pretrained_models*/
 cache/
+cache.tar.zst
 
 jobs/
 outputs_slurm/
