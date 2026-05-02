@@ -14,6 +14,7 @@ PlantCLEF2026
 │   ├── species_id_to_name.txt
 │   ├── vit_base_patch14_reg4_dinov2_lvd142m_pc24_onlyclassifier
 │   └── vit_base_patch14_reg4_dinov2_lvd142m_pc24_onlyclassifier_then_all
+├── pipeline
 └── share
     └── pretrained_model_usage
 ```
