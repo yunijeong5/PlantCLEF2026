@@ -91,4 +91,4 @@ class PipelineConfig:
 
     # ── Submission ────────────────────────────────────────────────────────────
     top_k: int = 15
-    min_score: float = 0.01
+    min_score: float = 0.0
