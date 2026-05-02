@@ -4,6 +4,7 @@ data_raw*/
 data/
 pretrained_models*/
 cache/
+cache_nojpeg/
 cache.tar.zst
 
 jobs/

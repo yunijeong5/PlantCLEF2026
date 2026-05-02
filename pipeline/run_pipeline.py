@@ -56,8 +56,8 @@ from .prior import (
 )
 from .submission import load_class_names, write_submission
 
-
 # ── helpers ───────────────────────────────────────────────────────────────────
+
 
 def _image_paths(images_dir: str) -> List[Path]:
     exts = {".jpg", ".jpeg", ".png", ".JPG", ".JPEG", ".PNG"}
@@ -75,6 +75,7 @@ def _ensure_scale1_in_scales(scales: List[int]) -> List[int]:
 
 
 # ── pipeline ──────────────────────────────────────────────────────────────────
+
 
 def run(cfg: PipelineConfig) -> Dict[str, List[int]]:
     t0 = time.time()
@@ -94,7 +95,7 @@ def run(cfg: PipelineConfig) -> Dict[str, List[int]]:
     extra_scale1 = False
     if cfg.use_bayesian_prior and cfg.prior_data_path is None and 1 not in run_scales:
         run_scales = _ensure_scale1_in_scales(run_scales)
-        extra_scale1 = True   # we added it only for prior computation
+        extra_scale1 = True  # we added it only for prior computation
 
     # ── Geo mask ──────────────────────────────────────────────────────────────
     geo_mask: Optional[np.ndarray] = None
@@ -109,8 +110,11 @@ def run(cfg: PipelineConfig) -> Dict[str, List[int]]:
         )
 
     # ── Feature extraction (all images, all scales) ───────────────────────────
-    jpeg_desc = (f"JPEG {cfg.jpeg_subsampling} q{cfg.jpeg_quality}"
-                 if cfg.use_jpeg_compression else "no JPEG compression")
+    jpeg_desc = (
+        f"JPEG {cfg.jpeg_subsampling} q{cfg.jpeg_quality}"
+        if cfg.use_jpeg_compression
+        else "no JPEG compression"
+    )
     print(f"Extracting features for scales {run_scales} ({jpeg_desc})...")
 
     # all_logits[i] = list of arrays [S², C] for image i (one per scale)
@@ -122,9 +126,16 @@ def run(cfg: PipelineConfig) -> Dict[str, List[int]]:
 
         img = Image.open(img_path).convert("RGB")
         scale_logits = get_all_logits(
-            img, stem, run_scales, model, cfg.cache_dir,
-            cfg.tile_size, cfg.batch_size,
-            cfg.use_jpeg_compression, cfg.jpeg_quality, cfg.jpeg_subsampling,
+            img,
+            stem,
+            run_scales,
+            model,
+            cfg.cache_dir,
+            cfg.tile_size,
+            cfg.batch_size,
+            cfg.use_jpeg_compression,
+            cfg.jpeg_quality,
+            cfg.jpeg_subsampling,
         )
         all_logits_per_image.append(scale_logits)
 
@@ -161,7 +172,9 @@ def run(cfg: PipelineConfig) -> Dict[str, List[int]]:
         tile_logits = np.concatenate(selected, axis=0)
 
         # Aggregate across tiles → [C]
-        image_probs = aggregate(tile_logits, cfg.aggregation, cfg.topk_mean_k, cfg.vote_k)
+        image_probs = aggregate(
+            tile_logits, cfg.aggregation, cfg.topk_mean_k, cfg.vote_k
+        )
 
         # Apply Bayesian prior (after aggregation — equivalent to before, more efficient)
         if priors is not None:
@@ -173,20 +186,21 @@ def run(cfg: PipelineConfig) -> Dict[str, List[int]]:
 
         # Top-K with minimum score threshold
         order = np.argsort(image_probs)[::-1]
-        top_ids = [
-            class_ids[i]
-            for i in order
-            if image_probs[i] >= cfg.min_score
-        ][: cfg.top_k]
+        top_ids = [class_ids[i] for i in order if image_probs[i] >= cfg.min_score][
+            : cfg.top_k
+        ]
         results[stem] = top_ids
 
     total = time.time() - t0
-    print(f"Done. {len(results)} images processed in {total:.1f}s "
-          f"({total / len(results):.2f}s/image).")
+    print(
+        f"Done. {len(results)} images processed in {total:.1f}s "
+        f"({total / len(results):.2f}s/image)."
+    )
     return results
 
 
 # ── CLI ────────────────────────────────────────────────────────────────────────
+
 
 def _parse_args() -> PipelineConfig:
     defaults = PipelineConfig()
@@ -197,19 +211,27 @@ def _parse_args() -> PipelineConfig:
     )
 
     # I/O
-    p.add_argument("--images-dir",  default=defaults.images_dir)
-    p.add_argument("--output",      default=str(Path(defaults.output_dir) / "submission.csv"),
-                   help="Path of the output submission CSV.")
-    p.add_argument("--cache-dir",   default=defaults.cache_dir,
-                   help="Directory for cached features and logits.")
+    p.add_argument("--images-dir", default=defaults.images_dir)
+    p.add_argument(
+        "--output",
+        default=str(Path(defaults.output_dir) / "submission.csv"),
+        help="Path of the output submission CSV.",
+    )
+    p.add_argument(
+        "--cache-dir",
+        default=defaults.cache_dir,
+        help="Directory for cached features and logits.",
+    )
 
     # Model
-    p.add_argument("--model-path",         default=defaults.model_path)
+    p.add_argument("--model-path", default=defaults.model_path)
     p.add_argument("--class-mapping-file", default=defaults.class_mapping_file)
-    p.add_argument("--batch-size",         type=int, default=defaults.batch_size)
+    p.add_argument("--batch-size", type=int, default=defaults.batch_size)
 
     # Pre-processing (paper 1)
-    p.add_argument("--jpeg",    dest="use_jpeg_compression", action="store_true",  default=True)
+    p.add_argument(
+        "--jpeg", dest="use_jpeg_compression", action="store_true", default=True
+    )
     p.add_argument("--no-jpeg", dest="use_jpeg_compression", action="store_false")
     p.add_argument("--jpeg-quality", type=int, default=defaults.jpeg_quality)
     p.add_argument(
@@ -223,37 +245,62 @@ def _parse_args() -> PipelineConfig:
         ),
     )
     p.add_argument(
-        "--scales", type=int, nargs="+", default=defaults.scales,
+        "--scales",
+        type=int,
+        nargs="+",
+        default=defaults.scales,
         help="Tiling scales, e.g. --scales 6 5 4 3 2 1  or  --scales 4  or  --scales 1",
     )
 
     # Aggregation
     p.add_argument(
-        "--aggregation", choices=["max", "mean", "topk_mean", "vote"], default=defaults.aggregation,
+        "--aggregation",
+        choices=["max", "mean", "topk_mean", "vote"],
+        default=defaults.aggregation,
         help="Tile aggregation method.",
     )
-    p.add_argument("--topk-mean-k", type=int, default=defaults.topk_mean_k,
-                   help="k for topk_mean aggregation.")
-    p.add_argument("--vote-k", type=int, default=defaults.vote_k,
-                   help="Top-k species each tile votes for (vote aggregation).")
+    p.add_argument(
+        "--topk-mean-k",
+        type=int,
+        default=defaults.topk_mean_k,
+        help="k for topk_mean aggregation.",
+    )
+    p.add_argument(
+        "--vote-k",
+        type=int,
+        default=defaults.vote_k,
+        help="Top-k species each tile votes for (vote aggregation).",
+    )
 
     # Post-processing (paper 2)
-    p.add_argument("--bayesian-prior",    dest="use_bayesian_prior", action="store_true",  default=True)
-    p.add_argument("--no-bayesian-prior", dest="use_bayesian_prior", action="store_false")
-    p.add_argument("--prior-data-path",   default=defaults.prior_data_path,
-                   help="Pre-computed cluster priors .npy file, shape [NUM_CLUSTERS, num_classes]. "
-                        "If omitted, priors are computed from scale-1 predictions.")
+    p.add_argument(
+        "--bayesian-prior", dest="use_bayesian_prior", action="store_true", default=True
+    )
+    p.add_argument(
+        "--no-bayesian-prior", dest="use_bayesian_prior", action="store_false"
+    )
+    p.add_argument(
+        "--prior-data-path",
+        default=defaults.prior_data_path,
+        help="Pre-computed cluster priors .npy file, shape [NUM_CLUSTERS, num_classes]. "
+        "If omitted, priors are computed from scale-1 predictions.",
+    )
 
-    p.add_argument("--geo-filter",    dest="use_geo_filter", action="store_true",  default=True)
+    p.add_argument(
+        "--geo-filter", dest="use_geo_filter", action="store_true", default=True
+    )
     p.add_argument("--no-geo-filter", dest="use_geo_filter", action="store_false")
     p.add_argument("--training-metadata-csv", default=defaults.training_metadata_csv)
 
     # Submission
     p.add_argument(
-        "--top-k", type=int, nargs="+", default=[defaults.top_k],
+        "--top-k",
+        type=int,
+        nargs="+",
+        default=[defaults.top_k],
         help="One or more K values. When multiple are given, writes one CSV per K "
-             "(use {k} in --output as a template, e.g. output/sub_{k}.csv, or names "
-             "are auto-generated as <stem>_topk<K>.csv). The pipeline runs once.",
+        "(use {k} in --output as a template, e.g. output/sub_{k}.csv, or names "
+        "are auto-generated as <stem>_topk<K>.csv). The pipeline runs once.",
     )
     p.add_argument("--min-score", type=float, default=defaults.min_score)
 
@@ -261,25 +308,25 @@ def _parse_args() -> PipelineConfig:
     top_k_list = sorted(set(a.top_k))  # deduplicate, ascending
 
     cfg = PipelineConfig(
-        images_dir              = a.images_dir,
-        output_dir              = str(Path(a.output).parent),
-        cache_dir               = a.cache_dir,
-        model_path              = a.model_path,
-        class_mapping_file      = a.class_mapping_file,
-        batch_size              = a.batch_size,
-        use_jpeg_compression    = a.use_jpeg_compression,
-        jpeg_quality            = a.jpeg_quality,
-        jpeg_subsampling        = a.jpeg_subsampling,
-        scales                  = a.scales,
-        aggregation             = a.aggregation,
-        topk_mean_k             = a.topk_mean_k,
-        vote_k                  = a.vote_k,
-        use_bayesian_prior      = a.use_bayesian_prior,
-        prior_data_path         = a.prior_data_path,
-        use_geo_filter          = a.use_geo_filter,
-        training_metadata_csv   = a.training_metadata_csv,
-        top_k                   = max(top_k_list),  # run with largest K; main() slices
-        min_score               = a.min_score,
+        images_dir=a.images_dir,
+        output_dir=str(Path(a.output).parent),
+        cache_dir=a.cache_dir,
+        model_path=a.model_path,
+        class_mapping_file=a.class_mapping_file,
+        batch_size=a.batch_size,
+        use_jpeg_compression=a.use_jpeg_compression,
+        jpeg_quality=a.jpeg_quality,
+        jpeg_subsampling=a.jpeg_subsampling,
+        scales=a.scales,
+        aggregation=a.aggregation,
+        topk_mean_k=a.topk_mean_k,
+        vote_k=a.vote_k,
+        use_bayesian_prior=a.use_bayesian_prior,
+        prior_data_path=a.prior_data_path,
+        use_geo_filter=a.use_geo_filter,
+        training_metadata_csv=a.training_metadata_csv,
+        top_k=max(top_k_list),  # run with largest K; main() slices
+        min_score=a.min_score,
     )
     # Stored for main() — not part of PipelineConfig dataclass
     cfg._output_csv = a.output
