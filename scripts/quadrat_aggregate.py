@@ -20,12 +20,12 @@ from pathlib import Path
 
 # Regex patterns from paper2_postprocessing/plantclef/classification/aggregation.py:21
 PATTERNS = [
-    (re.compile(r"^(CBN-.*?-.*?)-\d{8}$"),       1),  # CBN
-    (re.compile(r"^(GUARDEN-.*?-.*?)-.*$"),      1),  # GUARDEN
-    (re.compile(r"^(LISAH-.*?)-\d{8}$"),         1),  # LISAH
-    (re.compile(r"^(OPTMix-\d+)-.*$"),           1),  # OPTMix
-    (re.compile(r"^(RNNB-\d+-\d+)-\d{8}$"),      1),  # RNNB
-    (re.compile(r"^(2024-CEV3)-\d{8}$"),         1),  # 2024-CEV3 (guess)
+    (re.compile(r"^(CBN-.*?-.*?)-\d{8}$"), 1),  # CBN
+    (re.compile(r"^(GUARDEN-.*?-.*?)-.*$"), 1),  # GUARDEN
+    (re.compile(r"^(LISAH-.*?)-\d{8}$"), 1),  # LISAH
+    (re.compile(r"^(OPTMix-\d+)-.*$"), 1),  # OPTMix
+    (re.compile(r"^(RNNB-\d+-\d+)-\d{8}$"), 1),  # RNNB
+    (re.compile(r"^(2024-CEV3)-\d{8}$"), 1),  # 2024-CEV3 (guess)
 ]
 
 
@@ -45,7 +45,9 @@ def load_submission(path: str):
         for row in reader:
             quadrat_id, species_str = row[0], row[1]
             # species_str is like "[1397475, 1741661, 1395190]"
-            ids = [int(s.strip()) for s in species_str.strip("[]").split(",") if s.strip()]
+            ids = [
+                int(s.strip()) for s in species_str.strip("[]").split(",") if s.strip()
+            ]
             rows.append((quadrat_id, ids))
     return rows
 
@@ -63,10 +65,18 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("input")
     p.add_argument("output")
-    p.add_argument("--top-k", type=int, default=25,
-                   help="Take top-K species (by frequency across images of the same quadrat).")
-    p.add_argument("--strategy", choices=["topk", "union"], default="topk",
-                   help="topk: top-K by frequency. union: all unique species across images.")
+    p.add_argument(
+        "--top-k",
+        type=int,
+        default=25,
+        help="Take top-K species (by frequency across images of the same quadrat).",
+    )
+    p.add_argument(
+        "--strategy",
+        choices=["topk", "union"],
+        default="topk",
+        help="topk: top-K by frequency. union: all unique species across images.",
+    )
     args = p.parse_args()
 
     rows = load_submission(args.input)
@@ -88,7 +98,9 @@ def main():
 
     if len(groups) == len(rows):
         print("\nAll quadrat IDs are unique — no aggregation possible.")
-        print("Either the regex patterns don't match this test set, or the test set has")
+        print(
+            "Either the regex patterns don't match this test set, or the test set has"
+        )
         print("only one image per quadrat. Inspect a few quadrat IDs:")
         for q, _ in rows[:5]:
             print(f"  {q!r}  →  base = {base_quadrat_id(q)!r}")
