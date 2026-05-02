@@ -17,11 +17,18 @@ Supported methods (selectable via PipelineConfig.aggregation):
                 A smooth interpolation between max and mean; k is set by
                 PipelineConfig.topk_mean_k.
 
+  "vote"      — majority vote (paper 2 method per their README).
+                Each tile casts votes for its top-`vote_k` species; the
+                image score is the fraction of tiles that voted for each
+                species, in [0, 1].  Favours species seen consistently
+                across many tiles, not just one confident tile.
+
 Note on prior application order:
   Since P(y|cluster) is constant across all tiles of one image,
-  multiplying by the prior commutes with all three aggregation methods:
-    agg_method(p_t * prior) == agg_method(p_t) * prior
-  We therefore apply the prior AFTER aggregation for efficiency.
+  multiplying by the prior commutes with max/mean/topk_mean (all three are
+  positive homogeneous of degree 1) AND with vote-fraction (linear in the
+  per-tile indicator).  We therefore apply the prior AFTER aggregation for
+  efficiency.
 """
 
 import numpy as np
@@ -49,13 +56,34 @@ def aggregate_topk_mean(tile_probs: np.ndarray, k: int) -> np.ndarray:
     return top_k.mean(axis=0)
 
 
+def aggregate_vote(tile_probs: np.ndarray, vote_k: int) -> np.ndarray:
+    """
+    Shape [T, C] → [C].
+
+    Majority vote: each of the T tiles votes for its top *vote_k* species
+    (by softmax probability).  The image-level score for species c is the
+    fraction of tiles that included c in their top-k vote, ∈ [0, 1].
+
+    A species rises to the top only if many tiles agree on it — robust to
+    spurious one-tile spikes that "max" picks up.
+    """
+    T, C = tile_probs.shape
+    k = min(vote_k, C)
+    # Indices of the top-k species per tile (unordered within the top-k slice)
+    top_idx = np.argpartition(tile_probs, -k, axis=1)[:, -k:]   # [T, k]
+    counts = np.zeros(C, dtype=np.float32)
+    np.add.at(counts, top_idx.ravel(), 1)                       # vectorised tally
+    return counts / float(T)                                    # fraction of tiles
+
+
 def aggregate(
     tile_logits: np.ndarray,
     method: str = "max",
     topk_mean_k: int = 5,
+    vote_k: int = 5,
 ) -> np.ndarray:
     """
-    Convert raw logits [T, C] to an aggregated image-level probability [C].
+    Convert raw logits [T, C] to an aggregated image-level score [C].
 
     Softmax is applied before aggregation so that each tile's probability
     distribution sums to 1 (matching paper 2's per-tile softmax convention).
@@ -71,6 +99,8 @@ def aggregate(
         return aggregate_mean(tile_probs)
     if method == "topk_mean":
         return aggregate_topk_mean(tile_probs, topk_mean_k)
+    if method == "vote":
+        return aggregate_vote(tile_probs, vote_k)
 
     raise ValueError(f"Unknown aggregation method: {method!r}. "
-                     "Choose 'max', 'mean', or 'topk_mean'.")
+                     "Choose 'max', 'mean', 'topk_mean', or 'vote'.")

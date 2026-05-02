@@ -55,8 +55,10 @@ class PipelineConfig:
     #   "max"       — take the maximum per species (paper 1 default)
     #   "mean"      — average across all tiles
     #   "topk_mean" — average of the top-k tile values per species (use topk_mean_k)
-    aggregation: Literal["max", "mean", "topk_mean"] = "max"
+    #   "vote"      — each tile votes for its top-vote_k species; score = fraction of tiles
+    aggregation: Literal["max", "mean", "topk_mean", "vote"] = "max"
     topk_mean_k: int = 5  # only used when aggregation == "topk_mean"
+    vote_k: int = 5       # only used when aggregation == "vote"
 
     # ── Post-processing — paper 2 ─────────────────────────────────────────────
     # Bayesian prior: multiply image-level probabilities by P(y | cluster).

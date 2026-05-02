@@ -56,7 +56,7 @@ def _image_paths(images_dir: str) -> List[Path]:
 
 def _load_image_probs(
     stem: str, scales: List[int], cache_dir: str,
-    aggregation: str, topk_mean_k: int,
+    aggregation: str, topk_mean_k: int, vote_k: int,
 ) -> np.ndarray:
     """Load cached tile logits for one image, aggregate to [num_classes] probs."""
     tile_logits = []
@@ -69,7 +69,7 @@ def _load_image_probs(
             )
         tile_logits.append(np.load(lp))    # [S², C]
     tile_logits = np.concatenate(tile_logits, axis=0)   # [total_tiles, C]
-    return aggregate(tile_logits, aggregation, topk_mean_k)   # [C]
+    return aggregate(tile_logits, aggregation, topk_mean_k, vote_k)   # [C]
 
 
 def main():
@@ -86,8 +86,10 @@ def main():
 
     p.add_argument("--scales", type=int, nargs="+", default=defaults.scales)
     p.add_argument("--aggregation",
-                   choices=["max", "mean", "topk_mean"], default=defaults.aggregation)
+                   choices=["max", "mean", "topk_mean", "vote"], default=defaults.aggregation)
     p.add_argument("--topk-mean-k", type=int, default=defaults.topk_mean_k)
+    p.add_argument("--vote-k", type=int, default=defaults.vote_k,
+                   help="Top-k species each tile votes for (vote aggregation).")
 
     p.add_argument("--quadrat-combine",
                    choices=["mean", "max"], default="mean",
@@ -131,6 +133,7 @@ def main():
             cache_dir=a.cache_dir,
             aggregation=a.aggregation,
             topk_mean_k=a.topk_mean_k,
+            vote_k=a.vote_k,
         )
         if a.use_bayesian_prior and a.prior_data_path is None:
             lp = _logit_path(a.cache_dir, stem, 1)

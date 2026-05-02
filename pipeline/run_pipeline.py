@@ -161,7 +161,7 @@ def run(cfg: PipelineConfig) -> Dict[str, List[int]]:
         tile_logits = np.concatenate(selected, axis=0)
 
         # Aggregate across tiles → [C]
-        image_probs = aggregate(tile_logits, cfg.aggregation, cfg.topk_mean_k)
+        image_probs = aggregate(tile_logits, cfg.aggregation, cfg.topk_mean_k, cfg.vote_k)
 
         # Apply Bayesian prior (after aggregation — equivalent to before, more efficient)
         if priors is not None:
@@ -229,11 +229,13 @@ def _parse_args() -> PipelineConfig:
 
     # Aggregation
     p.add_argument(
-        "--aggregation", choices=["max", "mean", "topk_mean"], default=defaults.aggregation,
+        "--aggregation", choices=["max", "mean", "topk_mean", "vote"], default=defaults.aggregation,
         help="Tile aggregation method.",
     )
     p.add_argument("--topk-mean-k", type=int, default=defaults.topk_mean_k,
                    help="k for topk_mean aggregation.")
+    p.add_argument("--vote-k", type=int, default=defaults.vote_k,
+                   help="Top-k species each tile votes for (vote aggregation).")
 
     # Post-processing (paper 2)
     p.add_argument("--bayesian-prior",    dest="use_bayesian_prior", action="store_true",  default=True)
@@ -265,6 +267,7 @@ def _parse_args() -> PipelineConfig:
         scales                  = a.scales,
         aggregation             = a.aggregation,
         topk_mean_k             = a.topk_mean_k,
+        vote_k                  = a.vote_k,
         use_bayesian_prior      = a.use_bayesian_prior,
         prior_data_path         = a.prior_data_path,
         use_geo_filter          = a.use_geo_filter,
