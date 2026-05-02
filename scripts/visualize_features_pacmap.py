@@ -3,7 +3,7 @@ Visualize scale-1 CLS-token embeddings via PaCMAP.
 
 For each test image we cached a [1, 768] embedding at scale=1 (the whole image
 pass through DINOv2).  This script stacks them into [N, 768], runs PaCMAP for
-2-D visualization, and renders points coloured by:
+2-D visualization, and renders points colored by:
 
   - region prefix (from filename)         → which sites cluster together
   - paper 2's hardcoded 3-cluster mapping → reproduce their visual clustering
@@ -33,8 +33,11 @@ from pipeline.prior import REGION_PREFIXES, REGION_TO_CLUSTER, get_cluster
 
 def load_scale1_features(cache_dir: str, images_dir: str):
     feat_dir = Path(cache_dir) / "features"
-    img_paths = sorted(p for p in Path(images_dir).iterdir()
-                       if p.suffix.lower() in {".jpg", ".jpeg", ".png"})
+    img_paths = sorted(
+        p
+        for p in Path(images_dir).iterdir()
+        if p.suffix.lower() in {".jpg", ".jpeg", ".png"}
+    )
     stems, vecs = [], []
     for p in img_paths:
         f = feat_dir / f"{p.stem}_s1.npy"
@@ -64,13 +67,18 @@ def main():
     cfg = PipelineConfig()
 
     p = argparse.ArgumentParser()
-    p.add_argument("--cache-dir",  default=cfg.cache_dir)
+    p.add_argument("--cache-dir", default=cfg.cache_dir)
     p.add_argument("--images-dir", default=cfg.images_dir)
-    p.add_argument("--kmeans", type=int, default=0,
-                   help="If > 0, also run KMeans(k) on the embeddings and plot.")
+    p.add_argument(
+        "--kmeans",
+        type=int,
+        default=0,
+        help="If > 0, also run KMeans(k) on the embeddings and plot.",
+    )
     p.add_argument("--output", default="features_pacmap.png")
-    p.add_argument("--n-neighbors", type=int, default=10,
-                   help="PaCMAP n_neighbors parameter.")
+    p.add_argument(
+        "--n-neighbors", type=int, default=10, help="PaCMAP n_neighbors parameter."
+    )
     p.add_argument("--seed", type=int, default=42)
     a = p.parse_args()
 
@@ -91,7 +99,7 @@ def main():
     print(f"PaCMAP done. Output shape: {Y.shape}")
 
     # ── Categorical labels ────────────────────────────────────────────────────
-    region_labels  = [get_region_prefix(s) for s in stems]
+    region_labels = [get_region_prefix(s) for s in stems]
     cluster_labels = [get_cluster(s) for s in stems]
 
     # Region count summary
@@ -111,39 +119,58 @@ def main():
     cmap1 = plt.cm.get_cmap("tab20", len(unique_regions))
     for i, region in enumerate(unique_regions):
         mask = np.array([r == region for r in region_labels])
-        axes[0].scatter(Y[mask, 0], Y[mask, 1],
-                        c=[cmap1(i)], s=8, alpha=0.7,
-                        label=f"{region} (n={mask.sum()})")
-    axes[0].set_title(f"Coloured by region prefix (n={len(unique_regions)})")
+        axes[0].scatter(
+            Y[mask, 0],
+            Y[mask, 1],
+            c=[cmap1(i)],
+            s=8,
+            alpha=0.7,
+            label=f"{region} (n={mask.sum()})",
+        )
+    axes[0].set_title(f"colored by region prefix (n={len(unique_regions)})")
     axes[0].legend(fontsize=7, loc="best", markerscale=2, framealpha=0.8)
-    axes[0].set_xlabel("PaCMAP-1"); axes[0].set_ylabel("PaCMAP-2")
+    axes[0].set_xlabel("PaCMAP-1")
+    axes[0].set_ylabel("PaCMAP-2")
 
     # Panel 2: by paper 2 cluster
     cmap2 = plt.cm.get_cmap("Set1", 3)
     for cid in sorted(set(cluster_labels)):
         mask = np.array([c == cid for c in cluster_labels])
-        axes[1].scatter(Y[mask, 0], Y[mask, 1],
-                        c=[cmap2(cid)], s=8, alpha=0.7,
-                        label=f"cluster {cid} (n={mask.sum()})")
-    axes[1].set_title("Coloured by paper-2 hardcoded 3-cluster mapping")
+        axes[1].scatter(
+            Y[mask, 0],
+            Y[mask, 1],
+            c=[cmap2(cid)],
+            s=8,
+            alpha=0.7,
+            label=f"cluster {cid} (n={mask.sum()})",
+        )
+    axes[1].set_title("colored by paper-2 hardcoded 3-cluster mapping")
     axes[1].legend(fontsize=9, markerscale=2)
-    axes[1].set_xlabel("PaCMAP-1"); axes[1].set_ylabel("PaCMAP-2")
+    axes[1].set_xlabel("PaCMAP-1")
+    axes[1].set_ylabel("PaCMAP-2")
 
     # Panel 3: KMeans
     if a.kmeans > 0:
         from sklearn.cluster import KMeans
+
         print(f"\nRunning KMeans(k={a.kmeans}) on raw 768-d features...")
         km = KMeans(n_clusters=a.kmeans, random_state=a.seed, n_init=10)
         km_labels = km.fit_predict(X)
         cmap3 = plt.cm.get_cmap("tab10", a.kmeans)
         for c in range(a.kmeans):
             mask = km_labels == c
-            axes[2].scatter(Y[mask, 0], Y[mask, 1],
-                            c=[cmap3(c)], s=8, alpha=0.7,
-                            label=f"k={c} (n={mask.sum()})")
-        axes[2].set_title(f"Coloured by KMeans(k={a.kmeans}) on raw 768-d")
+            axes[2].scatter(
+                Y[mask, 0],
+                Y[mask, 1],
+                c=[cmap3(c)],
+                s=8,
+                alpha=0.7,
+                label=f"k={c} (n={mask.sum()})",
+            )
+        axes[2].set_title(f"colored by KMeans(k={a.kmeans}) on raw 768-d")
         axes[2].legend(fontsize=9, markerscale=2)
-        axes[2].set_xlabel("PaCMAP-1"); axes[2].set_ylabel("PaCMAP-2")
+        axes[2].set_xlabel("PaCMAP-1")
+        axes[2].set_ylabel("PaCMAP-2")
 
     fig.tight_layout()
     fig.savefig(a.output, dpi=150)

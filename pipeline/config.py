@@ -23,7 +23,9 @@ class PipelineConfig:
         / "vit_base_patch14_reg4_dinov2_lvd142m_pc24_onlyclassifier_then_all"
         / "model_best.pth.tar"
     )
-    class_mapping_file: str = str(PROJECT_ROOT / "pretrained_models" / "class_mapping.txt")
+    class_mapping_file: str = str(
+        PROJECT_ROOT / "pretrained_models" / "class_mapping.txt"
+    )
     num_classes: int = 7806
     tile_size: int = 518
     # Number of tiles to forward in one GPU batch across all scales.
@@ -58,7 +60,7 @@ class PipelineConfig:
     #   "vote"      — each tile votes for its top-vote_k species; score = fraction of tiles
     aggregation: Literal["max", "mean", "topk_mean", "vote"] = "max"
     topk_mean_k: int = 5  # only used when aggregation == "topk_mean"
-    vote_k: int = 5       # only used when aggregation == "vote"
+    vote_k: int = 5  # only used when aggregation == "vote"
 
     # ── Post-processing — paper 2 ─────────────────────────────────────────────
     # Bayesian prior: multiply image-level probabilities by P(y | cluster).
@@ -84,13 +86,13 @@ class PipelineConfig:
     # Approximate bounding boxes of target countries [lat_min, lat_max, lon_min, lon_max].
     geo_country_boxes: List[List[float]] = field(
         default_factory=lambda: [
-            [41.3, 51.1, -5.2, 9.6],   # France
-            [35.9, 43.8, -9.3, 4.3],   # Spain
-            [35.5, 47.1, 6.6, 18.5],   # Italy
-            [45.8, 47.8, 5.9, 10.5],   # Switzerland
+            [41.3, 51.1, -5.2, 9.6],  # France
+            [35.9, 43.8, -9.3, 4.3],  # Spain
+            [35.5, 47.1, 6.6, 18.5],  # Italy
+            [45.8, 47.8, 5.9, 10.5],  # Switzerland
         ]
     )
 
     # ── Submission ────────────────────────────────────────────────────────────
-    top_k: int = 15
+    top_k: int = 9
     min_score: float = 0.0
