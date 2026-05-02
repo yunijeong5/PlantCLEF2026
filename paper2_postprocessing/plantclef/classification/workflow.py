@@ -18,7 +18,7 @@ from pyspark.sql.types import (
 from plantclef.model_setup import setup_fine_tuned_model
 from plantclef.classification.transform import ClasifierFineTunedDINOv2
 from plantclef.spark import spark_resource
-from plantclef.serde import deserialize_image, serialize_image
+from plantclef.serde import deserialize_image, serialize_image, preprocess_tile
 
 
 def make_image_tiles_udf(grid_size: int):
@@ -52,7 +52,7 @@ def make_image_tiles_udf(grid_size: int):
             img = deserialize_image(b)
             tiles = split_into_grid(img)
             tile_structs = [
-                {"tile_index": i, "tile": serialize_image(tile)}
+                {"tile_index": i, "tile": serialize_image(preprocess_tile(tile))}
                 for i, tile in enumerate(tiles)
             ]
             all_tiles.append(tile_structs)
