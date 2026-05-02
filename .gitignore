@@ -3,6 +3,7 @@
 data_raw*/
 data/
 pretrained_models*/
+cache/
 
 jobs/
 outputs_slurm/
@@ -20,6 +21,7 @@ paper2_postprocessing/figures
 
 # dev
 .claude/
+share/writeup_outline.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
