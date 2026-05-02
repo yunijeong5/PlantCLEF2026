@@ -160,11 +160,23 @@ def apply_prior(
     image_probs: np.ndarray,        # [num_classes]
     image_name: str,
     priors: Dict[int, np.ndarray],  # {cluster_id: [num_classes]}
+    strength: float = 1.0,
 ) -> np.ndarray:
     """
     Multiply image-level probabilities by the cluster prior.
+
+    *strength* controls how strongly the prior affects ranking:
+      1.0 -> image_probs * prior
+      0.5 -> image_probs * sqrt(prior)
+      0.0 -> image_probs
+
     The result is NOT re-normalised so the relative ranking is simply rescaled.
     """
+    if strength < 0.0:
+        raise ValueError("prior strength must be non-negative.")
+    if strength == 0.0:
+        return image_probs
+
     cid = get_cluster(image_name)
     prior = priors.get(cid, priors.get(DEFAULT_CLUSTER))
-    return image_probs * prior
+    return image_probs * np.power(prior, strength)

@@ -67,6 +67,9 @@ class PipelineConfig:
     # If prior_data_path is None and use_bayesian_prior is True, the prior is
     # computed on-the-fly from scale-1 predictions cached in cache_dir.
     use_bayesian_prior: bool = True
+    # Exponent applied to P(y | cluster) before multiplying image scores.
+    # 1.0 keeps the original prior; smaller values make it softer.
+    prior_strength: float = 0.5
     # Path to a parquet/CSV with columns [cluster_id (int), prior_probabilities (list[float])].
     # Leave None to compute from the scale-1 tile cache.
     prior_data_path: Optional[str] = None
